@@ -42,6 +42,8 @@ dependencies {
 
     implementation(libs.mlkit.face.detection)
     implementation(libs.tensorflow.lite)
+    implementation(libs.vision.common)
+    implementation(libs.play.services.mlkit.face.detection)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
