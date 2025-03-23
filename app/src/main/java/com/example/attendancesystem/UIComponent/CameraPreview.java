@@ -2,7 +2,7 @@ package com.example.attendancesystem.UIComponent;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.media.FaceDetector;
+import android.graphics.Rect;
 import android.util.Log;
 import android.util.Size;
 import android.view.LayoutInflater;
@@ -27,10 +27,13 @@ import com.google.mlkit.vision.face.FaceDetection;
 import com.google.mlkit.vision.face.FaceDetector;
 import com.google.mlkit.vision.face.FaceDetectorOptions;
 
+import org.tensorflow.lite.Interpreter;
+
 import androidx.lifecycle.LifecycleOwner;
 import com.example.attendancesystem.R;
 import com.google.common.util.concurrent.ListenableFuture;
 
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -45,6 +48,7 @@ public class CameraPreview extends FrameLayout {
     private ProcessCameraProvider cameraProvider;
     private ImageAnalysis analysisUseCase;
     private Preview previewUseCase;
+    private GraphicOverlay overlayView;
     private final String TAG = "CameraX";
 
     public CameraPreview(Context context, AttributeSet attrs) {
@@ -55,13 +59,17 @@ public class CameraPreview extends FrameLayout {
     private void init(Context context){
         LayoutInflater.from(context).inflate(R.layout.camera_preview_layout,this,true);
         previewView = findViewById(R.id.previewView);
-        startCamera(context);
+
+        overlayView = new GraphicOverlay(context,null);
+        addView(overlayView);
+        startCamera();
     }
 
     //startCamera
-    private void startCamera(Context context){
-        ListenableFuture <ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(context);
-        cameraSelector = new CameraSelector.Builder().requireLensFacing(DesignatedCamera).build();
+    private void startCamera(){
+        ListenableFuture <ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(getContext());
+        // The variable store Camera input
+        cameraSelector = new CameraSelector.Builder().requireLensFacing(lensFacing).build();
 
         cameraProviderFuture.addListener(() -> {
             try {
@@ -76,7 +84,7 @@ public class CameraPreview extends FrameLayout {
             }catch(Exception e){
                 Log.e(TAG,"cameraProviderFuture Error",e);
             }
-        }, ContextCompat.getMainExecutor(context));
+        }, ContextCompat.getMainExecutor(getContext()));
     }
 
     //Binding Preview -> showcase Image
@@ -98,7 +106,7 @@ public class CameraPreview extends FrameLayout {
         }
     }
 
-    //Binding Analysis
+    //Binding Analysis -> Analyse Image
     private void bindAnalysisUseCase(){
         if(cameraProvider == null) return;
         cameraProvider.unbind(previewUseCase);
@@ -126,21 +134,42 @@ public class CameraPreview extends FrameLayout {
                 : Surface.ROTATION_0;
     }
 
+    //Pass Image to ML Kit
     private void analyze(@NonNull ImageProxy imageProxy){
         if(imageProxy.getImage() != null){
             InputImage inputImage = InputImage.fromMediaImage(
                     imageProxy.getImage(),
                     imageProxy.getImageInfo().getRotationDegrees()
             );
+            // Initialize ML kit
+            FaceDetectorOptions options = new FaceDetectorOptions.Builder()
+                    .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+                    .build();
 
-            FaceDetector faceDetector = (FaceDetector) FaceDetection.getClient();
+            FaceDetector faceDetector = FaceDetection.getClient(options);
 
+            // Detected Faces sent to preprocess
             faceDetector.process(inputImage)
                     .addOnSuccessListener(faces -> onSuccessListener(faces, inputImage))
                     .addOnFailureListener(e -> Log.e(TAG, "Barcode process failure", e))
-                    .addOnCompleteListener(task -> image.close());
+                    .addOnCompleteListener(task -> imageProxy.close());
         }else{
             imageProxy.close();
+        }
+    }
+
+    private void onSuccessListener(List<Face> faces, InputImage inputImage){
+        Rect boundingBox = null;
+        String name = null;
+        float scaleX = (float) previewView.getWidth()/ (float) inputImage.getWidth();
+        float scaleY = (float) previewView.getHeight()/ (float) inputImage.getHeight();
+
+        if(!faces.isEmpty()){
+            Face face = faces.get(0);
+            boundingBox = face.getBoundingBox();
+            overlayView.draw(boundingBox,scaleX,scaleY,"Detected Person");
+        }else{
+            overlayView.draw(null,1.0f,1.0f,null);
         }
     }
 
