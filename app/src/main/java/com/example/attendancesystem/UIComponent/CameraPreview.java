@@ -2,6 +2,7 @@ package com.example.attendancesystem.UIComponent;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.res.AssetFileDescriptor;
 import android.graphics.Rect;
 import android.util.Log;
 import android.util.Size;
@@ -33,6 +34,10 @@ import androidx.lifecycle.LifecycleOwner;
 import com.example.attendancesystem.R;
 import com.google.common.util.concurrent.ListenableFuture;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -50,6 +55,7 @@ public class CameraPreview extends FrameLayout {
     private Preview previewUseCase;
     private GraphicOverlay overlayView;
     private final String TAG = "CameraX";
+    private Interpreter tfLite;
 
     public CameraPreview(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -62,6 +68,7 @@ public class CameraPreview extends FrameLayout {
 
         overlayView = new GraphicOverlay(context,null);
         addView(overlayView);
+        loadModel();
         startCamera();
     }
 
@@ -168,9 +175,29 @@ public class CameraPreview extends FrameLayout {
             Face face = faces.get(0);
             boundingBox = face.getBoundingBox();
             overlayView.draw(boundingBox,scaleX,scaleY,"Detected Person");
+
+            // need to add detection here
         }else{
             overlayView.draw(null,1.0f,1.0f,null);
         }
     }
+
+    //Loading model
+    private void loadModel() {
+        try {
+            AssetFileDescriptor fileDescriptor = getContext().getAssets().openFd("mobile_face_net.tflite");
+            FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
+            FileChannel fileChannel = inputStream.getChannel();
+            long startOffset = fileDescriptor.getStartOffset();
+            long declaredLength = fileDescriptor.getDeclaredLength();
+
+            MappedByteBuffer model = fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
+            tfLite = new Interpreter(model);
+        } catch (IOException e) {
+            Log.e(TAG, "Error loading model", e);
+        }
+    }
+
+
 
 }
