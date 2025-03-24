@@ -3,7 +3,9 @@ package com.example.attendancesystem.UIComponent;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
+import android.graphics.Bitmap;
 import android.graphics.Rect;
+import android.media.Image;
 import android.util.Log;
 import android.util.Size;
 import android.view.LayoutInflater;
@@ -20,6 +22,7 @@ import android.content.Context;
 import android.util.AttributeSet;
 import androidx.core.content.ContextCompat;
 
+import com.example.attendancesystem.FaceProcessor;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.mlkit.vision.common.InputImage;
@@ -56,6 +59,9 @@ public class CameraPreview extends FrameLayout {
     private GraphicOverlay overlayView;
     private final String TAG = "CameraX";
     private Interpreter tfLite;
+
+    private static final int INPUT_SIZE = 112;
+    private static final int OUTPUT_SIZE = 112;
 
     public CameraPreview(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -175,12 +181,23 @@ public class CameraPreview extends FrameLayout {
             Face face = faces.get(0);
             boundingBox = face.getBoundingBox();
             overlayView.draw(boundingBox,scaleX,scaleY,"Detected Person");
+            Image image = inputImage.getMediaImage();
+            int rotation = inputImage.getRotationDegrees();
 
+//            recognize(image, rotation,boundingBox);
             // need to add detection here
         }else{
             overlayView.draw(null,1.0f,1.0f,null);
         }
     }
+
+    private void recognize(Image image,int rotation, Rect boundingBox){
+
+//        Bitmap bmp = FaceProcessor.ImgtoBmp(image,rotation,boundingBox);
+    }
+
+    private void train(Image image){}
+
 
     //Loading model
     private void loadModel() {
@@ -197,7 +214,5 @@ public class CameraPreview extends FrameLayout {
             Log.e(TAG, "Error loading model", e);
         }
     }
-
-
 
 }
