@@ -4,9 +4,11 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
+import android.graphics.HardwareBufferRenderer;
 import android.graphics.Rect;
 import android.media.Image;
 import android.util.Log;
+import android.util.Pair;
 import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.Surface;
@@ -39,9 +41,12 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -62,6 +67,9 @@ public class CameraPreview extends FrameLayout {
 
     private static final int INPUT_SIZE = 112;
     private static final int OUTPUT_SIZE = 112;
+    private float[][] embeddings;
+
+    private final HashMap<String,Faces.Recognition> savedFaces = new HashMap<>();
 
     public CameraPreview(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -75,6 +83,7 @@ public class CameraPreview extends FrameLayout {
         overlayView = new GraphicOverlay(context,null);
         addView(overlayView);
         loadModel();
+        loadFaces();
         startCamera();
     }
 
@@ -184,16 +193,51 @@ public class CameraPreview extends FrameLayout {
             Image image = inputImage.getMediaImage();
             int rotation = inputImage.getRotationDegrees();
 
-//            recognize(image, rotation,boundingBox);
+            Pair<String,Float> output  = recognize(image, rotation,boundingBox);
+            if (output.second >= 1.00f){
+                overlayView.draw(boundingBox, 1.0f, 1.0f, "unknown");
+            }
+            if(output.second < 1.00f) {
+                overlayView.draw(boundingBox, 1.0f, 1.0f, output.first);
+            }
             // need to add detection here
         }else{
-            overlayView.draw(null,1.0f,1.0f,null);
+            overlayView.draw(null,1.0f,1.0f,"unknown");
         }
     }
 
-    private void recognize(Image image,int rotation, Rect boundingBox){
+    private Pair<String,Float> recognize(Image image,int rotation, Rect boundingBox){
+        String name = null;
+        float min_distance = Float.MAX_VALUE;
+        Pair <String, Float> ret = null;
 
-//        Bitmap bmp = FaceProcessor.ImgtoBmp(image,rotation,boundingBox);
+        Bitmap bmp = FaceProcessor.ImgtoBmp(image,rotation,boundingBox);
+        ByteBuffer input = FaceProcessor.convertBitmapToByteBuffer(bmp);
+
+        Object[] inputArray = {input};
+        Map<Integer,Object> outputMap = new HashMap<>();
+        embeddings = new float[1][OUTPUT_SIZE];
+        outputMap.put(0,embeddings);
+
+        tfLite.runForMultipleInputsOutputs(inputArray,outputMap);
+
+        if(!savedFaces.isEmpty()){
+            for(HashMap.Entry<String,Faces.Recognition> entry : savedFaces.entrySet()){
+                name = entry.getKey();
+                final float[] knownEmb = ((float[][]) entry.getValue().getExtra())[0];
+
+                // Euclid distances between two embeddings
+                float distance = 0;
+                for (int i=0; i < embeddings[0].length; i++){
+                    float diff = embeddings[0][i] - knownEmb[i];
+                    distance += diff * diff;
+                }
+                min_distance = Math.min(distance,min_distance);
+            }
+        }
+
+        ret = new Pair<>(name,min_distance);
+        return ret;
     }
 
     private void train(Image image){}
@@ -214,5 +258,8 @@ public class CameraPreview extends FrameLayout {
             Log.e(TAG, "Error loading model", e);
         }
     }
+
+    //Load savedFaces from Backend
+    public void loadFaces(){}
 
 }

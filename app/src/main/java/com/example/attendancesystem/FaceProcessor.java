@@ -7,9 +7,11 @@ import com.google.mlkit.vision.common.InputImage;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
 
 public class FaceProcessor {
+    private static int INPUT_SIZE = 112;
     public static Bitmap ImgtoBmp(Image image, int rotation, Rect boundingBox ){
         Bitmap bitmap = ImgtoBitmap(image);
         //rotate
@@ -20,8 +22,32 @@ public class FaceProcessor {
     }
 
     //convert to ByteBuffer
-    public static ByteBuffer BmptoByteBuffer(InputImage inputImage){}
+    public static ByteBuffer convertBitmapToByteBuffer(Bitmap bitmap) {
+        int imageSize = INPUT_SIZE; // width & height
+        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(imageSize * imageSize * 3 * 4); // 4 bytes per float
+        byteBuffer.order(ByteOrder.nativeOrder());
 
+        int[] intValues = new int[imageSize * imageSize];
+        bitmap.getPixels(intValues, 0, imageSize, 0, 0, imageSize, imageSize);
+
+        int pixel = 0;
+        for (int i = 0; i < imageSize; ++i) {
+            for (int j = 0; j < imageSize; ++j) {
+                final int val = intValues[pixel++];
+
+                // Extract RGB and normalize to [0, 1]
+                float r = ((val >> 16) & 0xFF) / 255.0f;
+                float g = ((val >> 8) & 0xFF) / 255.0f;
+                float b = (val & 0xFF) / 255.0f;
+
+                byteBuffer.putFloat(r);
+                byteBuffer.putFloat(g);
+                byteBuffer.putFloat(b);
+            }
+        }
+
+        return byteBuffer;
+    }
     private static Bitmap ImgtoBitmap(Image image) {
 
         byte[] nv21=YUV_420_888toNV21(image);

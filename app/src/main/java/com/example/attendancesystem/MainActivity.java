@@ -18,7 +18,6 @@ import com.example.attendancesystem.UIComponent.CameraPreview;
 
 
 public class MainActivity extends AppCompatActivity {
-//    private CameraPreview cameraPreview = new CameraPreview();
     private static final String TAG = "MainActivity";
     private static final String CAMERA_PERMISSION = Manifest.permission.CAMERA;
     private static final int CAMERA_REQUEST_CODE = 1001;
