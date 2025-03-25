@@ -50,6 +50,8 @@ dependencies {
     implementation(libs.vision.common)
 //    implementation(libs.play.services.mlkit.face.detection)
 
+    implementation(libs.uvccamera)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

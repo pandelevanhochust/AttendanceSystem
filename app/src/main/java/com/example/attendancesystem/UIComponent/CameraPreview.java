@@ -113,7 +113,10 @@ public class CameraPreview extends FrameLayout {
     private void bindPreviewUseCase(){
         if(cameraProvider == null) return;
 
-        cameraProvider.unbind(previewUseCase);
+        if (previewUseCase != null) {
+            cameraProvider.unbind(previewUseCase);
+        }
+
         Preview.Builder builder = new Preview.Builder();
 //        builder.setTargetResolution(new Size(640,480));
         builder.setTargetRotation(getRotate());
@@ -133,7 +136,7 @@ public class CameraPreview extends FrameLayout {
         if(cameraProvider == null) return;
         cameraProvider.unbind(previewUseCase);
 
-        Executor cameraExecutor = Executors.newSingleThreadExecutor();
+        cameraExecutor = Executors.newSingleThreadExecutor();
 
         ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
         //        builder.setTargetResolution(new Size(640,480));
@@ -233,6 +236,8 @@ public class CameraPreview extends FrameLayout {
                     distance += diff * diff;
                 }
                 min_distance = Math.min(distance,min_distance);
+
+                //Can use Consine Similarity instead
             }
         }
 

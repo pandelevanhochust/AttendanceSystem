@@ -7,6 +7,7 @@ appcompat = "1.6.1"
 material = "1.10.0"
 activity = "1.8.0"
 constraintlayout = "2.1.4"
+uvccamera = "v3.00.00"
 
 camerax = "1.4.1"
 mlkit-face-detection = "16.1.7"
@@ -31,6 +32,8 @@ mlkit-face-detection = { group = "com.google.mlkit", name = "face-detection", ve
 
 tensorflow-lite = { group = "org.tensorflow", name = "tensorflow-lite", version.ref = "tflite" }
 vision-common = { group = "com.google.mlkit", name = "vision-common", version.ref = "visionCommon" }
+
+uvccamera = { group = "com.github.saki4510t", name = "UVCCamera", version.ref = "uvccamera" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
