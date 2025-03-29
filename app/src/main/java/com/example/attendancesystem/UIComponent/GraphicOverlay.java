@@ -85,6 +85,13 @@ public class GraphicOverlay extends View {
         return null;
     }
 
+    public void clear() {
+        this.rectF = null;
+        this.name = null;
+        postInvalidate(); // Triggers a redraw to clear the overlay
+    }
+
+
     private float translateX(float x){return x * scaleX;}
     private float translateY(float y){return y * scaleY;}
 }

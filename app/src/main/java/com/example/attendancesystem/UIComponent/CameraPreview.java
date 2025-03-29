@@ -10,15 +10,13 @@ import android.media.Image;
 import android.util.Log;
 import android.util.Pair;
 import android.util.Size;
-import android.view.LayoutInflater;
-import android.view.Surface;
-import android.view.ViewGroup;
+import android.view.*;
 
 import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.camera.core.*;
 import androidx.camera.lifecycle.ProcessCameraProvider;
-import androidx.camera.view.PreviewView;
 
 import android.content.Context;
 import android.util.AttributeSet;
@@ -26,18 +24,12 @@ import androidx.core.content.ContextCompat;
 
 import com.example.attendancesystem.FaceProcessor;
 import com.google.mlkit.vision.common.InputImage;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.face.Face;
 import com.google.mlkit.vision.face.FaceDetection;
 import com.google.mlkit.vision.face.FaceDetector;
 import com.google.mlkit.vision.face.FaceDetectorOptions;
 
 import org.tensorflow.lite.Interpreter;
-
-import androidx.lifecycle.LifecycleOwner;
-import com.example.attendancesystem.R;
-import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -47,156 +39,128 @@ import java.nio.channels.FileChannel;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+
+import com.jiangdg.ausbc.MultiCameraClient;
+import com.jiangdg.ausbc.base.CameraFragment;
+import com.jiangdg.ausbc.callback.ICameraStateCallBack;
+import com.jiangdg.ausbc.utils.*;
+import com.jiangdg.ausbc.widget.*;
+import com.jiangdg.ausbc.*;
+import com.example.attendancesystem.databinding.CameraPreviewLayoutBinding;
 
 // SetUp Camera
-public class CameraPreview extends FrameLayout {
+public class CameraPreview extends CameraFragment  {
+    private static final String TAG = "AndroidUSBCamera";
 
-    private int lensFacing = CameraSelector.LENS_FACING_FRONT;
-    private PreviewView previewView;
-    private ExecutorService cameraExecutor;
-    private CameraSelector cameraSelector;
-    private ProcessCameraProvider cameraProvider;
-    private ImageAnalysis analysisUseCase;
-    private Preview previewUseCase;
+    private CameraPreviewLayoutBinding CameraViewBinding;
+
     private GraphicOverlay overlayView;
-    private final String TAG = "CameraX";
     private Interpreter tfLite;
+    private float[][] embeddings;
+    private final HashMap<String, Faces.Recognition> savedFaces = new HashMap<>();
 
     private static final int INPUT_SIZE = 112;
     private static final int OUTPUT_SIZE = 112;
-    private float[][] embeddings;
 
-    private final HashMap<String,Faces.Recognition> savedFaces = new HashMap<>();
 
-    public CameraPreview(Context context, AttributeSet attrs) {
-        super(context, attrs);
-        init(context);
-    }
-
-    private void init(Context context){
-        LayoutInflater.from(context).inflate(R.layout.camera_preview_layout,this,true);
-        previewView = findViewById(R.id.previewView);
-
-        overlayView = new GraphicOverlay(context,null);
-        addView(overlayView);
-        loadModel();
-        loadFaces();
-        startCamera();
-    }
-
-    //startCamera
-    private void startCamera(){
-        ListenableFuture <ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(getContext());
-        // The variable store Camera input
-        cameraSelector = new CameraSelector.Builder().requireLensFacing(lensFacing).build();
-
-        cameraProviderFuture.addListener(() -> {
-            try {
-                // Take out the frame
-                cameraProvider = cameraProviderFuture.get();
-                if(cameraProvider != null){
-                    cameraProvider.unbindAll();
-                    bindPreviewUseCase();
-                    bindAnalysisUseCase();
-                }
-
-            }catch(Exception e){
-                Log.e(TAG,"cameraProviderFuture Error",e);
-            }
-        }, ContextCompat.getMainExecutor(getContext()));
-    }
-
-    //Binding Preview -> showcase Image
-    private void bindPreviewUseCase(){
-        if(cameraProvider == null) return;
-
-        if (previewUseCase != null) {
-            cameraProvider.unbind(previewUseCase);
+    @Nullable
+    @Override
+    public View getRootView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container) {
+        if (CameraViewBinding == null) {
+            CameraViewBinding = CameraPreviewLayoutBinding.inflate(inflater, container, false);
+            overlayView = CameraViewBinding.graphicOverlay;
+            loadModel();
+//            loadFaces();
         }
+        return CameraViewBinding.getRoot();
+    }
 
-        Preview.Builder builder = new Preview.Builder();
-//        builder.setTargetResolution(new Size(640,480));
-        builder.setTargetRotation(getRotate());
+    @Nullable
+    @Override
+    // Camera Holder here
+    public IAspectRatio getCameraView() {
+        return CameraViewBinding.previewView;
+    }
 
-        previewUseCase = builder.build();
-        previewUseCase.setSurfaceProvider(previewView.getSurfaceProvider());
+    @Nullable
+    @Override
+    // Layout of camera_preview_layout
+    public ViewGroup getCameraViewContainer() {
+        return CameraViewBinding.getRoot();
+    }
 
-        try{
-            cameraProvider.bindToLifecycle((LifecycleOwner) getContext(), cameraSelector, previewUseCase);
-        }catch(Exception e){
-            Log.e(TAG,"Error when binding preview",e);
+    @Override
+    public void onCameraState(@NonNull MultiCameraClient.ICamera self,
+                              @NonNull ICameraStateCallBack.State code,
+                              @Nullable String msg) {
+        switch (code) {
+            case OPENED:
+                handleCameraOpened();
+                break;
+            case CLOSED:
+                handleCameraClosed();
+                break;
+            case ERROR:
+                handleCameraError(msg);
+                break;
         }
     }
 
-    //Binding Analysis -> Analyse Image
-    private void bindAnalysisUseCase(){
-        if(cameraProvider == null) return;
-        cameraProvider.unbind(previewUseCase);
-
-        cameraExecutor = Executors.newSingleThreadExecutor();
-
-        ImageAnalysis.Builder builder = new ImageAnalysis.Builder();
-        //        builder.setTargetResolution(new Size(640,480));
-        builder.setTargetRotation(getRotate());
-
-        analysisUseCase = builder.build();
-        analysisUseCase.setAnalyzer(cameraExecutor, this::analyze);
-
-        try{
-            cameraProvider.bindToLifecycle((LifecycleOwner) getContext(), cameraSelector, analysisUseCase);
-        }catch(Exception e){
-            Log.e(TAG,"Error when binding preview",e);
-        }
+    @Override
+    public int getGravity() {
+        return Gravity.TOP;
     }
 
-    //Rotation
-    private int getRotate() {
-        return previewView.getDisplay() != null
-                ? previewView.getDisplay().getRotation()
-                : Surface.ROTATION_0;
+    private void handleCameraOpened() {
+        Log.d(TAG, "Camera opened");
     }
 
-    //Pass Image to ML Kit
-    private void analyze(@NonNull ImageProxy imageProxy){
-        if(imageProxy.getImage() != null){
-            InputImage inputImage = InputImage.fromMediaImage(
-                    imageProxy.getImage(),
-                    imageProxy.getImageInfo().getRotationDegrees()
-            );
-            // Initialize ML kit
-            FaceDetectorOptions options = new FaceDetectorOptions.Builder()
-                    .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
-                    .build();
-
-            FaceDetector faceDetector = FaceDetection.getClient(options);
-
-            // Detected Faces sent to preprocess
-            faceDetector.process(inputImage)
-                    .addOnSuccessListener(faces -> onSuccessListener(faces, inputImage))
-                    .addOnFailureListener(e -> Log.e(TAG, "Barcode process failure", e))
-                    .addOnCompleteListener(task -> imageProxy.close());
-        }else{
-            imageProxy.close();
-        }
+    private void handleCameraClosed() {
+        Log.d(TAG, "Camera closed");
     }
 
-    private void onSuccessListener(List<Face> faces, InputImage inputImage){
-        Rect boundingBox = null;
-        String name = null;
-        float scaleX = (float) previewView.getWidth()/ (float) inputImage.getWidth();
-        float scaleY = (float) previewView.getHeight()/ (float) inputImage.getHeight();
+    private void handleCameraError(@Nullable String msg) {
+        Log.e(TAG, "Camera error: " + msg);
+    }
+
+    //analyze Image
+    /*
+    USB Camera Frame (NV21)
+    → convert to Bitmap
+     → wrap in InputImage*/
+
+    public void onPreviewFrame(byte[] data, int width, int height, int format) {
+        // convert nv21 to Bitmap
+        Bitmap bitmap = FaceProcessor.nv21ToBitmap(data, width, height);
+        if (bitmap == null) return;
+        //convert Bitmap to inputImage
+        InputImage inputImage = InputImage.fromBitmap(bitmap, 0);
+
+        // Set up MLKit face detection
+        FaceDetectorOptions options = new FaceDetectorOptions.Builder()
+                .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+                .build();
+
+        FaceDetector detector = FaceDetection.getClient(options);
+
+        detector.process(inputImage)
+                .addOnSuccessListener(faces -> onFacesDetected(faces, inputImage))
+                .addOnFailureListener(e -> Log.e(TAG, "Face detection failed", e));
+    }
+
+    private void onFacesDetected(List<Face> faces, InputImage inputImage){
+        overlayView.clear();
 
         if(!faces.isEmpty()){
             Face face = faces.get(0);
-            boundingBox = face.getBoundingBox();
-            overlayView.draw(boundingBox,scaleX,scaleY,"Detected Person");
-            Image image = inputImage.getMediaImage();
-            int rotation = inputImage.getRotationDegrees();
+            Rect boundingBox = face.getBoundingBox();
+            overlayView.draw(boundingBox,1.0f,1.0f,"Detected Person");
+//            Image image = inputImage.getMediaImage();
+//            int rotation = inputImage.getRotationDegrees();
+//            Pair<String,Float> output  = recognize(image, rotation,boundingBox);
 
-            Pair<String,Float> output  = recognize(image, rotation,boundingBox);
+            Pair <String,Float> output = recognize(inputImage.getBitmapInternal(),boundingBox);
+
             if (output.second >= 1.00f){
                 overlayView.draw(boundingBox, 1.0f, 1.0f, "unknown");
             }
@@ -209,40 +173,35 @@ public class CameraPreview extends FrameLayout {
         }
     }
 
-    private Pair<String,Float> recognize(Image image,int rotation, Rect boundingBox){
+    // Using TFLite to recognize
+    private Pair<String, Float> recognize(Bitmap bitmap, Rect boundingBox) {
+        float minDistance = Float.MAX_VALUE;
         String name = null;
-        float min_distance = Float.MAX_VALUE;
-        Pair <String, Float> ret = null;
 
-        Bitmap bmp = FaceProcessor.ImgtoBmp(image,rotation,boundingBox);
-        ByteBuffer input = FaceProcessor.convertBitmapToByteBuffer(bmp);
+        Bitmap cropped = FaceProcessor.cropAndResize(bitmap, boundingBox);
+        ByteBuffer input = FaceProcessor.convertBitmapToByteBuffer(cropped);
 
         Object[] inputArray = {input};
-        Map<Integer,Object> outputMap = new HashMap<>();
+        Map<Integer, Object> outputMap = new HashMap<>();
         embeddings = new float[1][OUTPUT_SIZE];
-        outputMap.put(0,embeddings);
+        outputMap.put(0, embeddings);
 
-        tfLite.runForMultipleInputsOutputs(inputArray,outputMap);
+        tfLite.runForMultipleInputsOutputs(inputArray, outputMap);
 
-        if(!savedFaces.isEmpty()){
-            for(HashMap.Entry<String,Faces.Recognition> entry : savedFaces.entrySet()){
+        for (Map.Entry<String, Faces.Recognition> entry : savedFaces.entrySet()) {
+            float[] knownEmb = ((float[][]) entry.getValue().getExtra())[0];
+            float distance = 0;
+            for (int i = 0; i < embeddings[0].length; i++) {
+                float diff = embeddings[0][i] - knownEmb[i];
+                distance += diff * diff;
+            }
+            if (distance < minDistance) {
+                minDistance = distance;
                 name = entry.getKey();
-                final float[] knownEmb = ((float[][]) entry.getValue().getExtra())[0];
-
-                // Euclid distances between two embeddings
-                float distance = 0;
-                for (int i=0; i < embeddings[0].length; i++){
-                    float diff = embeddings[0][i] - knownEmb[i];
-                    distance += diff * diff;
-                }
-                min_distance = Math.min(distance,min_distance);
-
-                //Can use Consine Similarity instead
             }
         }
 
-        ret = new Pair<>(name,min_distance);
-        return ret;
+        return new Pair<>(name, minDistance);
     }
 
     private void train(Image image){}

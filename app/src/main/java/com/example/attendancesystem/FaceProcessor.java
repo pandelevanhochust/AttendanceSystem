@@ -21,7 +21,25 @@ public class FaceProcessor {
         return resized_bitmap;
     }
 
-    //convert to ByteBuffer
+    /*
+    USB Camera Frame (NV21)
+    → convert to Bitmap
+    → wrap in InputImage*/
+    public static Bitmap nv21ToBitmap(byte[] nv21, int width, int height) {
+        YuvImage yuvImage = new YuvImage(nv21, ImageFormat.NV21, width, height, null);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        yuvImage.compressToJpeg(new Rect(0, 0, width, height), 100, out);
+        byte[] imageBytes = out.toByteArray();
+        return BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
+    }
+
+    public static Bitmap cropAndResize(Bitmap bitmap, Rect boundingbox){
+        Bitmap cropped = cropBitmap(bitmap,boundingbox);
+        Bitmap resized_bitmap = resizeBitmap(cropped);
+        return resized_bitmap;
+    }
+
+    //convert to ByteBuffer - this is used only in CameraX
     public static ByteBuffer convertBitmapToByteBuffer(Bitmap bitmap) {
         int imageSize = INPUT_SIZE; // width & height
         ByteBuffer byteBuffer = ByteBuffer.allocateDirect(imageSize * imageSize * 3 * 4); // 4 bytes per float
@@ -48,6 +66,9 @@ public class FaceProcessor {
 
         return byteBuffer;
     }
+
+
+    //private method
     private static Bitmap ImgtoBitmap(Image image) {
 
         byte[] nv21=YUV_420_888toNV21(image);
@@ -184,9 +205,5 @@ public class FaceProcessor {
         image.recycle();
         return resizedBitmap;
     }
-
-
-
-    //    private static Bitmap rotateBitmap(){}
 
 }

@@ -23,13 +23,13 @@ android {
         }
     }
 
-//    aaptOptions {
-//        noCompress  "tflite"
-//    }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    buildFeatures {
+        viewBinding = true
     }
 }
 
@@ -50,7 +50,9 @@ dependencies {
     implementation(libs.vision.common)
 //    implementation(libs.play.services.mlkit.face.detection)
 
-    implementation(libs.uvccamera)
+//    implementation(libs.uvccamera)
+    implementation(libs.androidusbcamera.lib)
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

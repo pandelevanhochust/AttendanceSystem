@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "AttendanceSystem"
-include(":app")
+include(":app",":libusbcamera",":libutils",":libuvc",":libausbc",":libnative",":libuvccommon")
