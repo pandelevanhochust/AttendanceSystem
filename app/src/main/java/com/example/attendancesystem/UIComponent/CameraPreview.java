@@ -16,11 +16,6 @@ import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.camera.core.*;
-import androidx.camera.lifecycle.ProcessCameraProvider;
-
-import android.content.Context;
-import android.util.AttributeSet;
-import androidx.core.content.ContextCompat;
 
 import com.example.attendancesystem.FaceProcessor;
 import com.google.mlkit.vision.common.InputImage;
@@ -46,6 +41,7 @@ import com.jiangdg.ausbc.callback.ICameraStateCallBack;
 import com.jiangdg.ausbc.utils.*;
 import com.jiangdg.ausbc.widget.*;
 import com.jiangdg.ausbc.*;
+import com.jiangdg.ausbc.base.*;
 import com.example.attendancesystem.databinding.CameraPreviewLayoutBinding;
 
 // SetUp Camera
@@ -79,6 +75,7 @@ public class CameraPreview extends CameraFragment  {
     @Override
     // Camera Holder here
     public IAspectRatio getCameraView() {
+        Log.d(TAG, "Camera Showing UPPPPPPPP");
         return CameraViewBinding.previewView;
     }
 
@@ -86,6 +83,7 @@ public class CameraPreview extends CameraFragment  {
     @Override
     // Layout of camera_preview_layout
     public ViewGroup getCameraViewContainer() {
+        Log.d(TAG, "Hell Ye");
         return CameraViewBinding.getRoot();
     }
 
@@ -129,6 +127,7 @@ public class CameraPreview extends CameraFragment  {
     → convert to Bitmap
      → wrap in InputImage*/
 
+    @Override
     public void onPreviewFrame(byte[] data, int width, int height, int format) {
         // convert nv21 to Bitmap
         Bitmap bitmap = FaceProcessor.nv21ToBitmap(data, width, height);
@@ -152,6 +151,7 @@ public class CameraPreview extends CameraFragment  {
         overlayView.clear();
 
         if(!faces.isEmpty()){
+            Log.d(TAG,"New face detected");
             Face face = faces.get(0);
             Rect boundingBox = face.getBoundingBox();
             overlayView.draw(boundingBox,1.0f,1.0f,"Detected Person");

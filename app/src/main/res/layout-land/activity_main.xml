@@ -5,13 +5,13 @@
              android:layout_height="match_parent"
              android:background="#FAFAFA">
 
-    <!-- Fragment container để hiển thị CameraPreview -->
+    <!-- Fragment sẽ nằm full màn hình -->
     <FrameLayout
             android:id="@+id/fragment_container"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-    <!-- Các nút overlay nằm phía trên camera -->
+    <!-- Các nút overlay theo chiều ngang -->
     <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -21,45 +21,46 @@
                 android:id="@+id/btn_id_card"
                 android:layout_width="120dp"
                 android:layout_height="120dp"
-                android:layout_marginTop="120dp"
-                android:layout_marginBottom="24dp"
+                android:layout_marginBottom="16dp"
                 android:background="@drawable/circle_button_background"
                 android:src="@drawable/ic_id_card"
                 android:scaleType="centerInside"
                 android:tint="#000000"
                 android:contentDescription="ID Card"
-                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@+id/btn_add"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintBottom_toTopOf="@id/btn_add" />
+                app:layout_constraintTop_toTopOf="parent" />
 
         <ImageButton
                 android:id="@+id/btn_add"
                 android:layout_width="120dp"
                 android:layout_height="120dp"
-                android:layout_marginBottom="24dp"
+                android:layout_marginBottom="16dp"
                 android:background="@drawable/circle_button_background"
                 android:src="@drawable/ic_add"
                 android:scaleType="centerInside"
                 android:tint="#000000"
                 android:contentDescription="Add Person"
-                app:layout_constraintTop_toBottomOf="@id/btn_id_card"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintBottom_toTopOf="@id/btn_camera" />
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toEndOf= "@+id/btn_id_card"
+                app:layout_constraintEnd_toStartOf= "@+id/btn_camera"
+                 />
 
         <ImageButton
                 android:id="@+id/btn_camera"
                 android:layout_width="120dp"
                 android:layout_height="120dp"
-                android:layout_marginTop="24dp"
                 android:background="@drawable/circle_button_background"
                 android:src="@drawable/ic_camera"
                 android:scaleType="centerInside"
                 android:tint="#000000"
                 android:contentDescription="Camera"
-                app:layout_constraintTop_toBottomOf="@id/btn_add"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf= "@+id/btn_add"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintTop_toTopOf="parent"/>
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 </FrameLayout>

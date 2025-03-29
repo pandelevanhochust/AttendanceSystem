@@ -4,6 +4,7 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.Manifest;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
@@ -51,8 +52,13 @@ public class MainActivity extends AppCompatActivity {
 
 //        btnIdCard.setOnClickListener(v -> showFragment(new IDCardFragment()));
 //        btnAdd.setOnClickListener(v -> showFragment(new AddPersonFragment()));
-        btnCamera.setOnClickListener(v -> checkPermissionAndOpenCamera());
+        btnCamera.setOnClickListener(v -> {
+            Log.d(TAG, "Camera button clicked");
+            checkPermissionAndOpenCamera();
+        });
     }
+
+
 
     private void checkPermissionAndOpenCamera(){
         if(ContextCompat.checkSelfPermission(this,CAMERA_PERMISSION) == PackageManager.PERMISSION_GRANTED){
@@ -77,7 +83,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void showFragment(Fragment fragment){
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-        transaction.replace(viewBinding.main.getId(),fragment)
+        transaction.replace(R.id.fragment_container,fragment)
                 .commit();
     }
 }
